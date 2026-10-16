@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Algebraic Equation Solver</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAjVGOv-AA-UJgoTzRwqWm8yAsCGpeYf3s",
+            authDomain: "linear-solver-db.firebaseapp.com",
+            projectId: "linear-solver-db",
+            storageBucket: "linear-solver-db.firebasestorage.app",
+            messagingSenderId: "986601414726",
+            appId: "1:986601414726:web:329ee8bc24c54860d2aa47",
+            measurementId: "G-GJ9MK2J758"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.addDoc = addDoc;
+        window.getDocs = getDocs;
+        window.query = query;
+        window.orderBy = orderBy;
+        window.limit = limit;
+        console.log("🔥 Firebase is loaded successfully.");
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #F7F4F0;
+            --surface-color: #FFFFFF;
+            --primary-color: #C86432;
+            --primary-hover: #B35224;
+            --text-main: #3D2516;
+            --text-muted: #8B7355;
+            --border-color: #E6DFD5;
+            --shadow: 0 4px 12px rgba(61, 37, 22, 0.08);
+            --radius: 12px;
+            --max-width: 100%; 
+        }
+        
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+        body {
+            font-family: 'Kanit', 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- Header Section --- */
+        .header-wrapper {
+            width: 100%;
+            background-color: var(--text-main);
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        header {
+            width: 100%;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #FFFFFF;
+            padding: 16px 32px;
+            box-sizing: border-box;
+            flex-wrap: wrap; 
+            gap: 16px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #FFFFFF;
+            flex-wrap: wrap;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-icon {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 40px;
+            white-space: nowrap;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lang-switch {
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .lang-btn {
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            border: none;
+            background: transparent;
+            color: #D3C5B4;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .lang-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* --- Main Container --- */
+        .main-container {
+            width: 92%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); /* minmax(0,..) กันตาราง/เมทริกซ์ดันคอลัมน์ล้น */
+            gap: 32px;
+            padding: 0 0px 48px 0px;
+            box-sizing: border-box;
+            flex-grow: 1;
+        }
+
+        .main-container > *, .results-grid > * { min-width: 0; }
+
+        .card {
+            min-width: 0;
+            background-color: var(--surface-color);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 0;
+            margin-bottom: 24px;
+            color: var(--text-main);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        /* --- Form Elements --- */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        select, input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-main);
+            box-sizing: border-box;
+            background-color: #FAFCFF;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        /* --- Matrix Section --- */
+        .matrix-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 12px;
+        }
+
+        .matrix-section {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .matrix-a-container {
+            flex: 1 1 auto;
+        }
+
+        .matrix-b-container {
+            flex: 0 0 clamp(64px, 22%, 100px);
+        }
+
+        .matrix-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        /* --n ถูกตั้งจาก JS ตามขนาด N: ช่องจะหดได้ แต่ไม่เล็กกว่า 56px
+           ถ้า N ใหญ่จนไม่พอ จะเลื่อนซ้าย-ขวาเฉพาะในกรอบเมทริกซ์ ไม่ดันทั้งหน้า */
+        #gridA {
+            grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+            min-width: calc(var(--n, 3) * 56px + (var(--n, 3) - 1) * 8px);
+        }
+
+        .matrix-input {
+            text-align: center;
+            padding: 12px 4px;
+            min-width: 0;
+        }
+
+        .iterative-settings {
+            background-color: #FDFBFA;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .initial-guess-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .initial-guess-grid input {
+            text-align: center;
+            padding: 12px 6px;
+            min-width: 0;
+        }
+
+        /* --- Buttons --- */
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 2 1 160px;
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            font-family: inherit;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #F3DBB7;
+            color: var(--text-main);
+            border: 1px solid #E5C293;
+            padding: 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1 1 100px;
+            min-height: 48px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-align: center;
+            font-family: inherit;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .chart-box {
+            position: relative; /* Chart.js ต้องการ parent แบบ relative เพื่อ resize ถูกต้อง */
+            width: 100%;
+            height: clamp(180px, 45vw, 260px);
+        }
+
+        canvas { max-width: 100%; }
+
+        .btn-secondary:hover {
+            background-color: #ECC897;
+        }
+
+        /* --- Results Section --- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* ปรับให้กล่องคำตอบและกราฟเรียงบน-ล่าง จะได้ไม่เบียดกัน */
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .card-solution {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .solution-header {
+            display: flex;
+            flex-wrap: wrap; 
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .solution-header h2 {
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .badge {
+            background-color: var(--text-main);
+            color: white;
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .solution-values {
+            font-size: 24px;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        
+        .val-highlight {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .solution-footer {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: auto;
+        }
+
+        /* --- Table --- */
+        .card-table {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: center;
+            table-layout: fixed;
+            min-width: 500px;
+        }
+
+        th {
+            background-color: var(--text-main);
+            color: white;
+            padding: 12px;
+            font-weight: 500;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        th:first-child { text-align: center; width: 80px; }
+        th:last-child { border-right: none; }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        
+        td:first-child { text-align: center; font-weight: 500; }
+        td:last-child { border-right: none; }
+
+        tbody tr:nth-child(even) { background-color: #FAFCFF; }
+
+        tr.ellipsis-row td {
+            text-align: center; 
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            padding: 4px;
+            background-color: #FFFFFF;
+        }
+
+        tr:last-child td {
+            background-color: #FAF4F0;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        /* --- Modal --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(61, 37, 22, 0.5); backdrop-filter: blur(4px);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: var(--surface-color); width: 90%; max-width: 800px;
+            max-height: 85vh; max-height: 85dvh; border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; overflow: hidden;
+        }
+        .modal-header {
+            padding: 20px 24px; background-color: var(--text-main); color: white; display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h2 { margin: 0; border: none; padding: 0; color: white; font-size: 18px; }
+        .close-btn { background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; line-height: 1; }
+        .close-btn:hover { color: var(--primary-color); }
+        .modal-body {
+            padding: 24px; overflow: auto; font-family: monospace; font-size: 14px;
+            line-height: 1.6; color: var(--text-main); background-color: #FAFCFF;
+        }
+        .step-block { background: white; border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+        .step-title { font-weight: bold; color: var(--primary-color); margin-bottom: 8px; }
+
+        /* =========================================
+           📱 MEDIA QUERIES (Responsive)
+           ========================================= */
+
+        /* โน้ตบุ๊กจอเล็ก: ย่อ 90% เฉพาะจอคอม (ไม่ใช้กับแท็บเล็ต/มือถือ เพราะทำให้เลย์เอาต์เพี้ยน) */
+        @media (min-width: 1025px) and (max-width: 1366px) {
+            body { zoom: 90%; }
+        }
+
+        /* แท็บเล็ต / จอแคบ: เรียงคอลัมน์เดียว */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        /* แท็บเล็ตเล็ก / มือถือแนวนอน */
+        @media (max-width: 768px) {
+            .header-wrapper {
+                margin-bottom: 24px;
+            }
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 16px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 12px;
+            }
+            .main-container {
+                width: 100%;
+                padding: 0 16px 24px 16px;
+                gap: 24px;
+            }
+            .card {
+                padding: 20px;
+            }
+            .row-2 {
+                grid-template-columns: minmax(0, 1fr);
+                margin-bottom: 16px;
+            }
+            .action-buttons {
+                flex-direction: column;
+            }
+            .btn-primary, .btn-secondary {
+                flex: none;      /* ใน column ห้ามให้ flex กำหนดความสูง */
+                width: 100%;
+            }
+            .solution-values {
+                font-size: 20px;
+            }
+            /* 16px ขึ้นไป กันไม่ให้ iOS Safari ซูมเองตอนแตะช่องกรอก */
+            select, input[type="number"], input[type="text"] {
+                font-size: 16px;
+            }
+        }
+
+        /* มือถือ */
+        @media (max-width: 480px) {
+            header { padding: 14px 12px; }
+            h1 { font-size: 18px; gap: 8px; }
+            .header-actions { gap: 8px; }
+            .main-container { padding: 0 12px 20px 12px; }
+            .card { padding: 16px; }
+            h2 { font-size: 16px; margin-bottom: 16px; }
+            .form-group { margin-bottom: 16px; }
+            .iterative-settings { padding: 14px; }
+            #gridA { min-width: calc(var(--n, 3) * 48px + (var(--n, 3) - 1) * 8px); }
+            .matrix-section { gap: 12px; }
+            .matrix-grid { gap: 6px; }
+            .matrix-a-container label, .matrix-b-container label { min-height: 2.6em; } /* ให้หัวข้อ A/B สูงเท่ากัน แถวจะตรงกัน */
+            .solution-values { font-size: 18px; gap: 10px; }
+            th, td { padding: 8px 6px; font-size: 12px; }
+            th:first-child { width: 64px; }
+            .modal-content { width: 96%; }
+            .modal-header { padding: 14px 16px; }
+            .modal-body { padding: 14px; font-size: 13px; }
+        }
+
+        /* มือถือจอเล็กมาก (เช่น 320px) */
+        @media (max-width: 360px) {
+            h1 { font-size: 16px; }
+            .card { padding: 12px; }
+            .btn-icon { padding: 8px 12px; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="header-wrapper">
+        <header>
+            <h1 id="title_main">
+                <span style="background: var(--primary-color); color: white; padding: 4px 8px; border-radius: 4px; font-size: 16px;">Σ</span>
+                <span data-lang="en">Linear Algebraic Equation Solver</span>
+                <span data-lang="th" style="display: none;">เครื่องมือแก้ระบบสมการเชิงเส้น</span>
+                <span data-lang="en" style="border: 1px solid rgba(255, 255, 255, 0.3); padding: 4px 8px; border-radius: 12px; font-size: 10px; color: #D3C5B4; font-weight: normal; margin-left: 8px;">NUMERICAL METHODS</span>
+                <span data-lang="th" style="display: none; border: 1px solid rgba(255, 255, 255, 0.3); padding: 4px 8px; border-radius: 12px; font-size: 10px; color: #D3C5B4; font-weight: normal; margin-left: 8px;">ระเบียบวิธีเชิงตัวเลข</span>
+            </h1>
+            <div class="header-actions">
+                <div class="lang-switch">
+                    <button class="lang-btn active" onclick="setLanguage('en')" id="btn-en">EN</button>
+                    <button class="lang-btn" onclick="setLanguage('th')" id="btn-th">TH</button>
+                </div>
+                
+                <a href="history.html" class="btn-icon" style="text-decoration: none;">
+                    ⏱ <span data-lang="en">History</span><span data-lang="th" style="display: none;">ประวัติ</span>
+                </a>
+                <button class="btn-icon">👤</button>
+            </div>
+        </header>
+    </div>
+
+    <div class="main-container">
+        
+        <!-- Left Column: Inputs -->
+        <div class="card">
+            <h2>
+                <span data-lang="en">Inputs & Configuration</span>
+                <span data-lang="th" style="display: none;">การป้อนข้อมูลและการตั้งค่า</span>
+            </h2>
+            
+            <form id="solverForm" method="POST" action="solve">
+                <div class="row-2">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>
+                            <span data-lang="en">Method</span>
+                            <span data-lang="th" style="display: none;">วิธีการ (Method)</span>
+                        </label>
+                        <select id="methodSelect" name="method" onchange="toggleIterativeSettings()">
+                            <option value="Jacobi" data-en="Method: Jacobi Iteration" data-th="วิธี: จาโคบี (Jacobi)">Method: Jacobi Iteration</option>
+                            <option value="GaussSeidel" data-en="Method: Gauss-Seidel" data-th="วิธี: เกาส์-ไซเดล (Gauss-Seidel)">Method: Gauss-Seidel</option>
+                            <option value="Cramer" data-en="Method: Cramer's Rule" data-th="วิธี: กฎของคราเมอร์ (Cramer's Rule)">Method: Cramer's Rule</option>
+                            <option value="GaussElimination" data-en="Method: Gauss Elimination" data-th="วิธี: การกำจัดของเกาส์ (Gauss Elimination)">Method: Gauss Elimination</option>
+                            <option value="LU" data-en="Method: LU Decomposition" data-th="วิธี: แยกตัวประกอบ LU (LU Decomposition)">Method: LU Decomposition</option>
+                            <option value="Cholesky" data-en="Method: Cholesky Decomposition" data-th="วิธี: แยกตัวประกอบโคเลสกี (Cholesky)">Method: Cholesky Decomposition</option>
+                            <option value="ConjugateGradient" data-en="Method: Conjugate Gradient" data-th="วิธี: คอนจูเกตเกรเดียนต์ (Conjugate Gradient)">Method: Conjugate Gradient</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>
+                            <span data-lang="en">Matrix Size (N x N)</span>
+                            <span data-lang="th" style="display: none;">ขนาดเมทริกซ์ (N x N)</span>
+                        </label>
+                        <input type="number" id="matrixSize" name="size" value="3" min="2" max="10" onchange="generateGrid()">
+                    </div>
+                </div>
+
+                <div class="matrix-wrapper">
+                    <div class="matrix-section">
+                        <div class="matrix-a-container">
+                            <label id="labelMatrixA">Matrix A [3x3]</label>
+                            <div id="gridA" class="matrix-grid" style="--n: 3;">
+                                <input type="number" class="matrix-input" value="10">
+                                <input type="number" class="matrix-input" value="-1">
+                                <input type="number" class="matrix-input" value="2">
+                                <input type="number" class="matrix-input" value="-1">
+                                <input type="number" class="matrix-input" value="11">
+                                <input type="number" class="matrix-input" value="-1">
+                                <input type="number" class="matrix-input" value="2">
+                                <input type="number" class="matrix-input" value="-1">
+                                <input type="number" class="matrix-input" value="10">
+                            </div>
+                        </div>
+                        
+                        <div class="matrix-b-container">
+                            <label id="labelMatrixB">Vector B [3x1]</label>
+                            <div id="gridB" class="matrix-grid" style="grid-template-columns: 1fr;">
+                                <input type="number" class="matrix-input" value="14">
+                                <input type="number" class="matrix-input" value="18">
+                                <input type="number" class="matrix-input" value="30">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="iterativeSettings" class="iterative-settings">
+                    <label>
+                        <span data-lang="en">Iterative Settings</span>
+                        <span data-lang="th" style="display: none;">ตั้งค่าการทำซ้ำ (Iterative)</span>
+                    </label>
+                    <div style="margin-top: 16px;">
+                        <label>
+                            <span data-lang="en">Initial Guess (X0)</span>
+                            <span data-lang="th" style="display: none;">ค่าเริ่มต้น (X0)</span>
+                        </label>
+                        <div id="gridX0" class="initial-guess-grid">
+                            <input type="number" value="0">
+                            <input type="number" value="0">
+                            <input type="number" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="row-2" style="margin-bottom: 0;">
+                        <div>
+                            <label>
+                                <span data-lang="en">Error Tolerance</span>
+                                <span data-lang="th" style="display: none;">ค่าความคลาดเคลื่อนที่ยอมรับได้ (Tolerance)</span>
+                            </label>
+                            <input type="number" name="tolerance" step="0.0001" value="0.0001">
+                        </div>
+                        <div>
+                            <label>
+                                <span data-lang="en">Max Iterations</span>
+                                <span data-lang="th" style="display: none;">จำนวนรอบสูงสุด</span>
+                            </label>
+                            <input type="number" name="maxIter" value="50">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" class="btn-primary" onclick="simulateSolve()">
+                        ▷ <span data-lang="en">Solve</span><span data-lang="th" style="display: none;">คำนวณ</span>
+                    </button>
+                    <button type="button" id="btnClear" class="btn-secondary" onclick="clearAllData()">
+                        <span data-lang="en">Clear</span><span data-lang="th" style="display: none;">ล้างค่า</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Right Column: Results -->
+        <div class="results-grid">
+            
+            <div class="card card-solution">
+                <div class="solution-header">
+                    <h2>
+                        <span data-lang="en">Final Solution</span>
+                        <span data-lang="th" style="display: none;">คำตอบสุดท้าย</span>
+                    </h2>
+                    <span class="badge" id="iterBadge">
+                        <span data-lang="en">Iteration 12</span>
+                        <span data-lang="th" style="display: none;">รอบที่ 12</span>
+                    </span>
+                </div>
+                
+                <div class="solution-values" id="finalResult">
+                    <div>X₁ = <span class="val-highlight">1.000</span></div>
+                    <div>X₂ = <span class="val-highlight">2.000</span></div>
+                    <div>X₃ = <span class="val-highlight">3.000</span></div>
+                </div>
+                
+                <div class="solution-footer" id="convergeMsg">
+                    <span data-lang="en">Converged below 0.0001% error</span>
+                    <span data-lang="th" style="display: none;">ลู่เข้าสำเร็จ (Error < 0.0001%)</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>
+                    <span data-lang="en">Convergence Curve (Error %)</span>
+                    <span data-lang="th" style="display: none;">กราฟแสดงการลู่เข้า (Error %)</span>
+                </h2>
+                <div class="chart-box">
+                    <canvas id="errorChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card card-table">
+                <div class="solution-header" style="margin-bottom: 16px;">
+                    <h2>
+                        <span data-lang="en">Detailed Solution (Step-by-Step)</span>
+                        <span data-lang="th" style="display: none;">ผลลัพธ์โดยละเอียด (ตารางรอบการคำนวณ)</span>
+                    </h2>
+                    <a href="#" onclick="openModal(event)" style="color: var(--primary-color); text-decoration: none; font-size: 12px; font-weight: 500;">
+                        <span data-lang="en">View steps ➔</span>
+                        <span data-lang="th" style="display: none;">ดูวิธีทำ ➔</span>
+                    </a>
+                </div>
+                
+                <div class="table-container">
+                    <table id="iterationTable">
+                        <thead>
+                            <tr>
+                                <th><span data-lang="en">Iteration</span><span data-lang="th" style="display: none;">รอบที่</span></th>
+                                <th>x1</th>
+                                <th>x2</th>
+                                <th>x3</th>
+                                <th><span data-lang="en">Error (%)</span><span data-lang="th" style="display: none;">ความคลาดเคลื่อน (%)</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>1.4000</td>
+                                <td>1.6364</td>
+                                <td>3.0000</td>
+                                <td>100.0000</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>0.9636</td>
+                                <td>2.0364</td>
+                                <td>2.8836</td>
+                                <td>45.2830</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>1.0269</td>
+                                <td>1.9861</td>
+                                <td>3.0109</td>
+                                <td>6.1615</td>
+                            </tr>
+                            <tr class="ellipsis-row">
+                                <td colspan="5">...</td>
+                            </tr>
+                            <tr>
+                                <td>12</td>
+                                <td>1.0000</td>
+                                <td>2.0000</td>
+                                <td>3.0000</td>
+                                <td>6.63e-5</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal ดูวิธีทำ -->
+    <div class="modal-overlay" id="stepModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <span data-lang="en">Calculation Steps</span>
+                    <span data-lang="th" style="display: none;">วิธีทำแบบละเอียด</span>
+                </h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+                    <span data-lang="en">No calculation data available. Please solve first.</span>
+                    <span data-lang="th" style="display: none;">ไม่มีข้อมูลวิธีทำ กรุณากดคำนวณก่อน</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Language Toggle Logic ---
+        let currentLang = 'en';
+        
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.getElementById('btn-en').classList.remove('active');
+            document.getElementById('btn-th').classList.remove('active');
+            document.getElementById('btn-' + lang).classList.add('active');
+            document.documentElement.lang = lang;
+
+            const enElements = document.querySelectorAll('[data-lang="en"]');
+            const thElements = document.querySelectorAll('[data-lang="th"]');
+            
+            if (lang === 'th') {
+                enElements.forEach(el => el.style.display = 'none');
+                thElements.forEach(el => { el.style.display = ''; });
+                updateMatrixLabelsTH();
+            } else {
+                thElements.forEach(el => el.style.display = 'none');
+                enElements.forEach(el => { el.style.display = ''; });
+                updateMatrixLabelsEN();
+            }
+            
+            // เปลี่ยนข้อความใน <option> ตามภาษา (selectedIndex คงเดิม จึงไม่เสียค่าที่ผู้ใช้เลือกไว้)
+            document.querySelectorAll('#methodSelect option').forEach(opt => {
+                opt.textContent = opt.dataset[lang] || opt.textContent;
+            });
+
+            if (errorChart) {
+                errorChart.options.scales.x.title.text = lang === 'th' ? 'รอบที่ (Iteration)' : 'Iteration';
+                errorChart.options.scales.y.title.text = lang === 'th' ? 'ความคลาดเคลื่อน (Error %)' : 'Error %';
+                errorChart.update();
+            }
+        }
+        
+        function updateMatrixLabelsEN() {
+             const size = document.getElementById("matrixSize").value;
+             document.getElementById("labelMatrixA").textContent = `Matrix A [${size}x${size}]`;
+             document.getElementById("labelMatrixB").textContent = `Vector B [${size}x1]`;
+        }
+        
+        function updateMatrixLabelsTH() {
+             const size = document.getElementById("matrixSize").value;
+             document.getElementById("labelMatrixA").textContent = `เมทริกซ์ A [${size}x${size}]`;
+             document.getElementById("labelMatrixB").textContent = `เวกเตอร์ B [${size}x1]`;
+        }
+
+        // --- Toggle Iterative Settings Logic ---
+        function toggleIterativeSettings() {
+            const selectEl = document.getElementById("methodSelect");
+            const method = selectEl.options[selectEl.selectedIndex].value;
+            const settingsDiv = document.getElementById("iterativeSettings");
+            
+            if (method === "Jacobi" || method === "GaussSeidel") {
+                settingsDiv.style.display = "block";
+            } else {
+                settingsDiv.style.display = "none";
+            }
+        }
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            toggleIterativeSettings();
+            initChart();
+        });
+
+        // --- Dynamic Grid Generation ---
+        function generateGrid() {
+            const sizeInput = document.getElementById("matrixSize");
+            let size = parseInt(sizeInput.value);
+            if (isNaN(size)) size = 3;
+            size = Math.min(10, Math.max(2, size));   // กันกรอกเกิน min/max
+            sizeInput.value = size;
+            const gridA = document.getElementById("gridA");
+            const gridB = document.getElementById("gridB");
+            const gridX0 = document.getElementById("gridX0");
+            
+            if (currentLang === 'th') updateMatrixLabelsTH();
+            else updateMatrixLabelsEN();
+            
+            gridA.style.setProperty('--n', size);   // CSS คำนวณคอลัมน์เองจากค่านี้
+            
+            gridA.innerHTML = '';
+            for(let i=0; i < size*size; i++) gridA.innerHTML += `<input type="number" class="matrix-input" value="0">`;
+            
+            gridB.innerHTML = '';
+            for(let i=0; i < size; i++) gridB.innerHTML += `<input type="number" class="matrix-input" value="0">`;
+            
+            gridX0.innerHTML = '';
+            for(let i=0; i < size; i++) gridX0.innerHTML += `<input type="number" value="0">`;
+        }
+
+        // --- Chart.js Setup ---
+        let errorChart;
+        function initChart() {
+            const ctx = document.getElementById('errorChart').getContext('2d');
+            const labels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const data = [100, 45.2, 20.1, 8.5, 3.2, 1.1, 0.4, 0.1, 0.05, 0.01, 0.002, 0.0001];
+
+            errorChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Error %',
+                        data: data,
+                        borderColor: '#C86432',
+                        backgroundColor: 'rgba(200, 100, 50, 0.1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#FFFFFF',
+                        pointBorderColor: '#C86432',
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: '#E6DFD5' }, title: { display: true, text: 'Iteration', font: {size: 10} } },
+                        y: { grid: { color: '#E6DFD5' }, title: { display: true, text: 'Error %', font: {size: 10} }, min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+        
+        // --- Form Submission Simulation ---
+        async function simulateSolve() {
+            const size = parseInt(document.getElementById("matrixSize").value);
+            const method = document.getElementById("methodSelect").value;
+            
+            const aInputs = document.querySelectorAll("#gridA .matrix-input");
+            let matrixA = [];
+            for(let i=0; i<size; i++) {
+                let row = [];
+                for(let j=0; j<size; j++) row.push(parseFloat(aInputs[i * size + j].value));
+                matrixA.push(row);
+            }
+            
+            const bInputs = document.querySelectorAll("#gridB .matrix-input");
+            let vectorB = Array.from(bInputs).map(input => parseFloat(input.value));
+            
+            const x0Inputs = document.querySelectorAll("#gridX0 input");
+            let initialGuess = Array.from(x0Inputs).map(input => parseFloat(input.value));
+            
+            const tolerance = parseFloat(document.querySelector('input[name="tolerance"]').value);
+            const maxIter = parseInt(document.querySelector('input[name="maxIter"]').value);
+
+            const payload = { method, matrixA, vectorB, initialGuess, tolerance, maxIter };
+
+            try {
+                const btn = document.querySelector(".btn-primary");
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "⏳ Processing...";
+                btn.disabled = true;
+
+                const response = await fetch("https://linear-solver-backend.onrender.com/api/solve", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                updateResultsUI(data);
+                
+                if (window.saveToHistory) {
+                    window.saveToHistory(method, size, data.finalSolution);
+                }
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            } catch (error) {
+                console.error("Error calling backend:", error);
+                alert(currentLang === 'th' ? "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Java ได้" : "Failed to connect to the Java backend.");
+                document.querySelector(".btn-primary").disabled = false;
+            }
+        }
+        
+        let lastCalculatedData = null;
+        function updateResultsUI(data) {
+            lastCalculatedData = data;
+            const resultDiv = document.getElementById("finalResult");
+            resultDiv.innerHTML = '';
+            data.finalSolution.forEach((val, idx) => {
+                resultDiv.innerHTML += `<div>X${idx + 1} = <span class="val-highlight">${val.toFixed(4)}</span></div>`;
+            });
+
+            const isIterative = data.steps && data.steps.length > 0;
+            const badge = document.getElementById("iterBadge");
+            const msg = document.getElementById("convergeMsg");
+            if (isIterative) {
+                const lastIter = data.steps[data.steps.length - 1].iteration;
+                badge.innerHTML = currentLang === 'th' ? `รอบที่ ${lastIter}` : `Iteration ${lastIter}`;
+                
+                if (data.converged) {
+                    msg.innerHTML = currentLang === 'th' ? `ลู่เข้าสำเร็จ (Error < ${document.querySelector('input[name="tolerance"]').value}%)` : `Converged below ${document.querySelector('input[name="tolerance"]').value}% error`;
+                    msg.style.color = 'green';
+                } else {
+                    msg.innerHTML = currentLang === 'th' ? `ไม่ลู่เข้าในจำนวนรอบที่กำหนด` : `Failed to converge within max iterations`;
+                    msg.style.color = 'red';
+                }
+            } else {
+                badge.innerHTML = "Direct Method";
+                msg.innerHTML = currentLang === 'th' ? "คำนวณด้วยวิธีทางตรง" : "Calculated using exact direct method";
+                msg.style.color = 'var(--text-muted)';
+            }
+
+            if (isIterative) {
+                const labels = data.steps.map(s => s.iteration);
+                const errorData = data.steps.map(s => s.error);
+                errorChart.data.labels = labels;
+                errorChart.data.datasets[0].data = errorData;
+                errorChart.update();
+            } else {
+                errorChart.data.labels = [1];
+                errorChart.data.datasets[0].data = [0];
+                errorChart.update();
+            }
+
+            const tbody = document.querySelector("#iterationTable tbody");
+            tbody.innerHTML = '';
+            
+            if (isIterative) {
+                data.steps.forEach(step => {
+                    let row = `<tr><td>${step.iteration}</td>`;
+                    step.x.forEach(val => row += `<td>${val.toFixed(4)}</td>`);
+                    row += `<td>${step.error.toFixed(6)}</td></tr>`;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                let row = `<tr><td>-</td>`;
+                data.finalSolution.forEach(val => row += `<td>${val.toFixed(4)}</td>`);
+                row += `<td>0.000000</td></tr>`;
+                tbody.innerHTML += row;
+            }
+        }
+        
+        function openModal(e) {
+            if(e) e.preventDefault(); 
+            const modal = document.getElementById('stepModal');
+            const modalBody = document.getElementById('modalBody');
+            modal.style.display = 'flex';
+            if (lastCalculatedData) generateStepDetails(modalBody, lastCalculatedData);
+        }
+
+        function closeModal() {
+            document.getElementById('stepModal').style.display = 'none';
+        }
+
+        document.getElementById('stepModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        function generateStepDetails(container, data) {
+            const method = document.getElementById("methodSelect").value;
+            container.innerHTML = ''; 
+            let html = '';
+            
+            if (data.steps && data.steps.length > 0) {
+                html += `<div class="step-block"><div class="step-title">Method: ${method} (Iterative)</div>`;
+                html += `Initial Guess: [${document.querySelectorAll("#gridX0 input")[0].value}, ...]</div>`;
+                
+                data.steps.forEach(step => {
+                    html += `<div class="step-block">`;
+                    html += `<div class="step-title">Iteration ${step.iteration}</div>`;
+                    step.x.forEach((val, idx) => {
+                        html += `X<sub>${idx+1}</sub> = ${val.toFixed(6)}<br>`;
+                    });
+                    html += `<div style="color: #8B7355; margin-top: 8px;">Max Relative Error = ${step.error.toFixed(6)}%</div>`;
+                    html += `</div>`;
+                });
+            } else {
+                html += `<div class="step-block"><div class="step-title">Method: ${method} (Direct Method)</div>`;
+                html += `The system was solved directly without iterations.</div>`;
+                html += `<div class="step-block">`;
+                html += `<div class="step-title">Final Result Vectors</div>`;
+                data.finalSolution.forEach((val, idx) => {
+                    html += `X<sub>${idx+1}</sub> = <b>${val.toFixed(6)}</b><br>`;
+                });
+                html += `</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function clearAllData() {
+            const allInputs = document.querySelectorAll('.matrix-input, .initial-guess-grid input');
+            allInputs.forEach(input => input.value = "0");
+
+            const resultDiv = document.getElementById("finalResult");
+            const msg = document.getElementById("convergeMsg");
+            const badge = document.getElementById("iterBadge");
+            
+            resultDiv.innerHTML = `<div>X₁ = <span class="val-highlight">0.000</span></div><div>X₂ = <span class="val-highlight">0.000</span></div><div>X₃ = <span class="val-highlight">0.000</span></div>`;
+            
+            if (currentLang === 'th') {
+                badge.innerHTML = "ยังไม่ได้คำนวณ";
+                msg.innerHTML = "รอรับข้อมูล...";
+            } else {
+                badge.innerHTML = "Not calculated";
+                msg.innerHTML = "Waiting for data...";
+            }
+            msg.style.color = 'var(--text-muted)';
+
+            const tbody = document.querySelector("#iterationTable tbody");
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">${currentLang === 'th' ? "ไม่มีข้อมูลแสดงผล" : "No data to display"}</td></tr>`;
+
+            if (errorChart) {
+                errorChart.data.labels = [1];
+                errorChart.data.datasets[0].data = [0];
+                errorChart.update();
+            }
+            lastCalculatedData = null;
+        }
+
+        window.saveToHistory = async function(method, size, result) {
+            if (window.db) {
+                try {
+                    await window.addDoc(window.collection(window.db, "history"), {
+                        method: method,
+                        matrixSize: size,
+                        result: result,
+                        timestamp: new Date()
+                    });
+                    console.log("บันทึกประวัติสำเร็จ!");
+                } catch (err) {
+                    console.error("Firebase Save Error:", err);
+                }
+            } else {
+                console.warn("ไม่พบการเชื่อมต่อ Firebase (บันทึกไม่ได้)");
+            }
+        };
+    </script>
+</body>
+</html>
